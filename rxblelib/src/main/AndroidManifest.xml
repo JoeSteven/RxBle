@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.joey.rxble" >
+    <application >
+        <activity android:name=".permission.PermissionActivity"/>
+    </application>
+</manifest>
