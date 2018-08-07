@@ -26,11 +26,13 @@ public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.ScanHolder> {
 
         TextView line1;
         TextView line2;
+        TextView line3;
 
         ScanHolder(View itemView) {
             super(itemView);
             line1 = itemView.findViewById(R.id.scan_line1);
             line2 = itemView.findViewById(R.id.scan_line2);
+            line3 = itemView.findViewById(R.id.scan_line3);
         }
     }
 
@@ -93,6 +95,7 @@ public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.ScanHolder> {
         });
         holder.line1.setText(String.format(Locale.getDefault(), "%s (%s)", bleDevice.getMacAddress(), bleDevice.getName()));
         holder.line2.setText(String.format(Locale.getDefault(), "RSSI: %d", rxBleScanResult.getRssi()));
+        holder.line3.setText(String.format(Locale.getDefault(), "Type: %d", rxBleScanResult.getBleDevice().getBluetoothDevice().getType()));
     }
 
     void setOnAdapterItemClickListener(OnAdapterItemClickListener onAdapterItemClickListener) {
