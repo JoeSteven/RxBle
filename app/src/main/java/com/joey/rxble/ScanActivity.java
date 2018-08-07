@@ -1,5 +1,6 @@
 package com.joey.rxble;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -8,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.joey.rxble.connect.ConnectActivity;
 import com.polidea.rxandroidble2.scan.ScanResult;
 
 public class ScanActivity extends AppCompatActivity implements View.OnClickListener {
@@ -27,7 +29,6 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.open_toggle_btn).setOnClickListener(this);
         findViewById(R.id.scan_toggle_btn).setOnClickListener(this);
         findViewById(R.id.close_toggle_btn).setOnClickListener(this);
-        findViewById(R.id.disconect_toggle_btn).setOnClickListener(this);
         findViewById(R.id.stop_toggle_btn).setOnClickListener(this);
         findViewById(R.id.quit_toggle_btn).setOnClickListener(this);
         RecyclerView rvScan = findViewById(R.id.scan_results);
@@ -46,7 +47,9 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void connect(ScanResult result) {
-
+        Intent intent = new Intent(this, ConnectActivity.class);
+        intent.putExtra("device_address", result.getBleDevice().getMacAddress());
+        startActivity(intent);
     }
 
 
@@ -58,9 +61,6 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.scan_toggle_btn:
                 scan();
-                break;
-            case R.id.disconect_toggle_btn:
-                disconnect();
                 break;
             case R.id.stop_toggle_btn:
                 stopScan();
@@ -93,10 +93,6 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     private void stopScan() {
         mOperator.stopScan();
         toast("stop scan");
-    }
-
-    private void disconnect() {
-        mOperator.disconnect();
     }
 
     private void close() {
