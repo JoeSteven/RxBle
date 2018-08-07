@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.joey.rxble.permission.PermissionListener;
 import com.joey.rxble.permission.PermissionUtil;
@@ -35,12 +36,12 @@ import io.reactivex.schedulers.Schedulers;
 
 /**
  * Description: easier way to use RxAndroidBle, require per
- *
+ * <p>
  * android.permission.ACCESS_COARSE_LOCATION
  * android.permission.ACCESS_FINE_LOCATION
  * android.permission.BLUETOOTH
  * android.permission.BLUETOOTH_ADMIN
- *
+ * <p>
  * author:Joey
  * date:2018/8/6
  */
@@ -63,21 +64,19 @@ public class RxBleOperator {
     @SuppressLint("MissingPermission")
     public Observable<RxBleClient> enable() {
         return Observable.create(emitter -> {
-            if (RxBle.isEnable()) {
-                if (mBtAdapter.enable()) {
-                    emitter.onNext(RxBle.client());
-                    emitter.onComplete();
-                } else {
-                    emitter.onError(new BleException("enable bluetooth failed!"));
-                }
+            if (RxBle.isEnable()) return;
+            if (hasPermission() && mBtAdapter.enable()) {
+                Log.d("RxBleDemo", "enable bluetooth");
+                emitter.onNext(RxBle.client());
+                emitter.onComplete();
                 return;
             }
-
             PermissionUtil.requestPermission(mActivity, new PermissionListener() {
 
                         @Override
                         public void permissionGranted(@NonNull String[] permission) {
                             if (mBtAdapter.enable()) {
+                                Log.d("RxBleDemo", "enable bluetooth");
                                 emitter.onNext(RxBle.client());
                                 emitter.onComplete();
                             } else {
@@ -93,6 +92,12 @@ public class RxBleOperator {
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.ACCESS_FINE_LOCATION);
         });
+    }
+
+    public boolean hasPermission() {
+        return PermissionUtil.hasPermission(mActivity,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION);
     }
 
     @SuppressLint("MissingPermission")
@@ -116,12 +121,21 @@ public class RxBleOperator {
      * @param scanFilter   scan filter
      */
     public Observable<ScanResult> scan(@NonNull final ScanSettings scanSettings, final ScanFilter... scanFilter) {
-        return enable().flatMap((Function<RxBleClient, ObservableSource<ScanResult>>) rxBleClient
-                -> rxBleClient.scanBleDevices(scanSettings, scanFilter)
-                .subscribeOn(Schedulers.io())
+        stopScan();
+        Observable<ScanResult> scanResultObservable;
+        if (RxBle.isEnable()) {
+            scanResultObservable = RxBle.client().scanBleDevices(scanSettings, scanFilter);
+        } else {
+            scanResultObservable = enable()
+                    .flatMap(rxBleClient -> RxBle.client().observeStateChanges()
+                    .filter(state -> state == RxBleClient.State.READY)
+                    .flatMapSingle((Function<RxBleClient.State, SingleSource<RxBleClient>>) state -> Single.just(RxBle.client()))
+                    .flatMap((Function<RxBleClient, ObservableSource<ScanResult>>) client -> client.scanBleDevices(scanSettings, scanFilter)));
+        }
+        return scanResultObservable.subscribeOn(Schedulers.io())
                 .doOnSubscribe(disposable -> scanDisposable = disposable)
                 .doOnDispose(() -> scanDisposable = null)
-                .observeOn(AndroidSchedulers.mainThread()));
+                .observeOn(AndroidSchedulers.mainThread());
     }
 
 
@@ -145,9 +159,22 @@ public class RxBleOperator {
      * @param rxBleDevice device
      */
     public Observable<RxBleConnection> connect(final RxBleDevice rxBleDevice, final boolean autoConnect, final Timeout timeOut) {
-        return enable().flatMap((Function<RxBleClient, ObservableSource<RxBleConnection>>) rxBleClient
-                -> timeOut != null ? rxBleDevice.establishConnection(autoConnect, timeOut)
-                : rxBleDevice.establishConnection(autoConnect))
+        disconnect();
+        Observable<RxBleConnection> connectionObservable;
+        if (RxBle.isEnable()) {
+            connectionObservable = timeOut != null ? rxBleDevice.establishConnection(autoConnect, timeOut)
+                    : rxBleDevice.establishConnection(autoConnect);
+        } else {
+            connectionObservable = enable()
+                    .flatMap(rxBleClient -> RxBle.client().observeStateChanges()
+                    .filter(state -> state == RxBleClient.State.READY)
+                    .flatMapSingle((Function<RxBleClient.State, SingleSource<RxBleClient>>) state -> Single.just(RxBle.client()))
+                    .flatMap((Function<RxBleClient, ObservableSource<RxBleConnection>>)
+                            client -> timeOut != null ? rxBleDevice.establishConnection(autoConnect, timeOut)
+                            : rxBleDevice.establishConnection(autoConnect)));
+
+        }
+        return connectionObservable
                 .doOnSubscribe(disposable -> connectDisposable = disposable)
                 .doOnDispose(() -> {
                     mConnection = null;// release connection
@@ -216,25 +243,25 @@ public class RxBleOperator {
      * stop scan
      */
     public void stopScan() {
-        if (dispose(scanDisposable) && scanDisposable != null && !scanDisposable.isDisposed()) {
+        if (scanDisposable != null && !scanDisposable.isDisposed()) {
             scanDisposable.dispose();
-            scanDisposable = null;
         }
+        scanDisposable = null;
     }
 
     /**
      * disconnect
      */
     public void disconnect() {
-        if (dispose(connectDisposable) && connectDisposable != null && !scanDisposable.isDisposed()) {
+        if (connectDisposable != null && !scanDisposable.isDisposed()) {
             connectDisposable.dispose();
-            connectDisposable = null;
         }
-
+        connectDisposable = null;
     }
 
     /**
      * add disposable to release
+     *
      * @param disposable
      */
     public void collect(Disposable disposable) {
@@ -269,7 +296,9 @@ public class RxBleOperator {
             emitter.onNext(mConnection);
             emitter.onComplete();
         }).flatMap(function)
-                .doOnError(throwable -> { if (throwable instanceof BleDisconnectedException) ; });
+                .doOnError(throwable -> {
+                    if (throwable instanceof BleDisconnectedException) ;
+                });
 
         oNewConnect = connect(macAddress)
                 .flatMap(function);
@@ -292,7 +321,9 @@ public class RxBleOperator {
             emitter.onNext(mConnection);
             emitter.onComplete();
         }).flatMapSingle(function)
-                .doOnError(throwable -> { if (throwable instanceof BleDisconnectedException) mConnection = null; });
+                .doOnError(throwable -> {
+                    if (throwable instanceof BleDisconnectedException) mConnection = null;
+                });
         oNewConnect = connect(macAddress)
                 .flatMapSingle(function);
         if (mConnection != null && connectDisposable != null && !connectDisposable.isDisposed()) {

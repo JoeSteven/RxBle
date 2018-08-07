@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -80,17 +81,18 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     private void open() {
         mOperator.collect(mOperator.enable()
                 .subscribe(rxBleClient -> toast("enable bluetooth success!"),
-                        throwable -> toast("enable failed" + throwable.toString())));
+                        throwable -> toast("enable failed " + throwable.toString())));
     }
 
     private void scan() {
         mOperator.collect(mOperator.scan()
                 .subscribe(this::refresh,
-                        throwable -> toast("enable failed" + throwable.toString())));
+                        throwable -> toast("enable failed " + throwable.toString())));
     }
 
     private void stopScan() {
         mOperator.stopScan();
+        toast("stop scan");
     }
 
     private void disconnect() {
@@ -116,6 +118,7 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
 
     public void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        Log.d("RxBleDemo", msg);
     }
 
 }

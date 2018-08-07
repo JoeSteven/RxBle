@@ -29,8 +29,8 @@ public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.ScanHolder> {
 
         ScanHolder(View itemView) {
             super(itemView);
-            line1 = itemView.findViewById(R.id.line1);
-            line2 = itemView.findViewById(R.id.line2);
+            line1 = itemView.findViewById(R.id.scan_line1);
+            line2 = itemView.findViewById(R.id.scan_line2);
         }
     }
 
@@ -78,7 +78,7 @@ public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.ScanHolder> {
 
     @Override
     public ScanHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        final View itemView = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.two_line_list_item, parent, false);
+        final View itemView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_scan, parent, false);
         return new ScanHolder(itemView);
     }
 
