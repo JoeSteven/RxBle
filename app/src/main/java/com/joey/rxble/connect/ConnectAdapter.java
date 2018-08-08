@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.joey.rxble.R;
+import com.joey.rxble.RxBle;
 import com.polidea.rxandroidble2.RxBleDevice;
 import com.polidea.rxandroidble2.scan.ScanResult;
 
@@ -126,22 +127,10 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
 
     private String describeProperties(BluetoothGattCharacteristic characteristic) {
         List<String> properties = new ArrayList<>();
-        if (isCharacteristicReadable(characteristic)) properties.add("Read");
-        if (isCharacteristicWriteable(characteristic)) properties.add("Write");
-        if (isCharacteristicNotifiable(characteristic)) properties.add("Notify");
+        if (RxBle.isCharacteristicReadable(characteristic)) properties.add("Read");
+        if (RxBle.isCharacteristicWritable(characteristic)) properties.add("Write");
+        if (RxBle.isCharacteristicNotifiable(characteristic)) properties.add("Notify");
         return TextUtils.join(" ", properties);
     }
 
-    private boolean isCharacteristicNotifiable(BluetoothGattCharacteristic characteristic) {
-        return (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0;
-    }
-
-    private boolean isCharacteristicReadable(BluetoothGattCharacteristic characteristic) {
-        return ((characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0);
-    }
-
-    private boolean isCharacteristicWriteable(BluetoothGattCharacteristic characteristic) {
-        return (characteristic.getProperties() & (BluetoothGattCharacteristic.PROPERTY_WRITE
-                | BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)) != 0;
-    }
 }

@@ -42,6 +42,7 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initBle() {
         RxBle.init(getApplicationContext());
+        RxBle.enableLog(true);
         RxBle.markState();
         mOperator = RxBle.create(this);
     }
@@ -79,13 +80,13 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void open() {
-        mOperator.collect(mOperator.enable()
+        mOperator.add(mOperator.enable()
                 .subscribe(rxBleClient -> toast("enable bluetooth success!"),
                         throwable -> toast("enable failed " + throwable.toString())));
     }
 
     private void scan() {
-        mOperator.collect(mOperator.scan()
+        mOperator.add(mOperator.scan()
                 .subscribe(this::refresh,
                         throwable -> toast("enable failed " + throwable.toString())));
     }
