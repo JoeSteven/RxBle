@@ -4,9 +4,9 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.content.DialogInterface;
+import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -20,7 +20,6 @@ import android.widget.Toast;
 import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
 import com.joey.rxble.RxBleOperator;
-import com.joey.rxble.operation.RxBleIndicateCharacteristicFunc;
 import com.joey.rxble.operation.RxBleTransformer;
 import com.joey.rxble.util.HexString;
 import com.polidea.rxandroidble2.NotificationSetupMode;
@@ -34,7 +33,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Function;
 
@@ -97,7 +95,7 @@ public class ConnectActivity extends AppCompatActivity {
 
     private void initBle() {
         mDevice = getIntent().getStringExtra("device_address");
-        mOperator = RxBle.create(this).setConnectRetryTimes(5);
+        mOperator = RxBle.create().setConnectRetryTimes(5);
         tvDevice.setText(mDevice);
         connect();
     }

@@ -2,7 +2,6 @@ package com.joey.rxble;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -17,8 +16,6 @@ import android.widget.Toast;
 import com.joey.rxble.connect.ConnectActivity;
 import com.joey.rxble.operation.RxBleTransformer;
 import com.joey.rxble.util.HexString;
-import com.polidea.rxandroidble2.RxBleConnection;
-import com.polidea.rxandroidble2.scan.ScanFilter;
 import com.polidea.rxandroidble2.scan.ScanResult;
 
 import java.util.UUID;
@@ -49,10 +46,10 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
         tvRead = findViewById(R.id.tv_read);
         etDevice = findViewById(R.id.et_device);
         etUUID = findViewById(R.id.et_uuid);
-        etDevice.setText(getSharedPreferences("default",MODE_PRIVATE)
-                .getString("device",""));
-        etUUID.setText(getSharedPreferences("default",MODE_PRIVATE)
-                .getString("uuid",""));
+        etDevice.setText(getSharedPreferences("default", MODE_PRIVATE)
+                .getString("device", ""));
+        etUUID.setText(getSharedPreferences("default", MODE_PRIVATE)
+                .getString("uuid", ""));
         RecyclerView rvScan = findViewById(R.id.scan_results);
         mAdapter = new ScanAdapter();
         rvScan.setLayoutManager(new LinearLayoutManager(this));
@@ -63,10 +60,7 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initBle() {
-        RxBle.init(getApplicationContext());
-        RxBle.enableLog(true);
-        RxBle.markState();
-        mOperator = RxBle.create(this);
+        mOperator = RxBle.create();
     }
 
     public void connect(ScanResult result) {
@@ -77,30 +71,34 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
 
     @SuppressLint("CheckResult")
     public void read() {
-        if(TextUtils.isEmpty(etDevice.getText()) || TextUtils.isEmpty(etUUID.getText())){
+        if (TextUtils.isEmpty(etDevice.getText()) || TextUtils.isEmpty(etUUID.getText())) {
             toast("device address and uuid must not be null");
             return;
         }
-        mOperator.scan(new ScanFilter.Builder().setDeviceAddress(etDevice.getText().toString()).build())
-                .doOnNext(this::refresh)
-                .flatMap(result -> mOperator.connect(result.getBleDevice()))
-                .flatMap(RxBleTransformer.readCharacteristic(etDevice.getText().toString(),
-                        UUID.fromString(etUUID.getText().toString()), mOperator))
+        UUID uuid = UUID.fromString(etUUID.getText().toString());
+
+        mOperator.scan()
+                .filter(result -> TextUtils.equals(result.getBleDevice().getMacAddress(), etDevice.getText().toString()))// 找到指定设备
+                .firstOrError() // 不要重复发送数据
+                .flatMapObservable(result -> mOperator.connect(result.getBleDevice())) // 连接设备
+                .flatMap(RxBleTransformer.readCharacteristic(etDevice.getText().toString(), uuid, mOperator))//读取数据
                 .subscribe(bytes -> {
-                    tvRead.setText("read success:"+HexString.bytesToHex(bytes));
-                    toast("read success:"+HexString.bytesToHex(bytes));
-                    }, throwable -> tvRead.setText("read failed:"+throwable.toString()));
-        getSharedPreferences("default",MODE_PRIVATE)
+                            tvRead.setText("read success:" + HexString.bytesToHex(bytes));
+                            toast("read success:" + HexString.bytesToHex(bytes));
+                        },
+                        throwable -> tvRead.setText("read failed:" + throwable.toString()));
+
+        getSharedPreferences("default", MODE_PRIVATE)
                 .edit()
-                .putString("device",etDevice.getText().toString())
-                .putString("uuid",etUUID.getText().toString())
+                .putString("device", etDevice.getText().toString())
+                .putString("uuid", etUUID.getText().toString())
                 .apply();
     }
 
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
+        switch (v.getId()) {
             case R.id.open_toggle_btn:
                 open();
                 break;
@@ -156,13 +154,13 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
     protected void onPause() {
         super.onPause();
         mOperator.disconnect();
+        mOperator.stopScan();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         mOperator.release();
-        RxBle.restoreState();
     }
 
 

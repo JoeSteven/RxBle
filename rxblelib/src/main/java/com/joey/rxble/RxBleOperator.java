@@ -1,15 +1,11 @@
 package com.joey.rxble;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
-import com.joey.rxble.permission.PermissionListener;
-import com.joey.rxble.permission.PermissionUtil;
+import com.joey.rxble.exception.BleEnableException;
 import com.polidea.rxandroidble2.NotificationSetupMode;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleConnection;
@@ -17,7 +13,7 @@ import com.polidea.rxandroidble2.RxBleDevice;
 import com.polidea.rxandroidble2.Timeout;
 import com.polidea.rxandroidble2.exceptions.BleAlreadyConnectedException;
 import com.polidea.rxandroidble2.exceptions.BleDisconnectedException;
-import com.polidea.rxandroidble2.exceptions.BleException;
+import com.polidea.rxandroidble2.internal.RxBleLog;
 import com.polidea.rxandroidble2.scan.ScanFilter;
 import com.polidea.rxandroidble2.scan.ScanResult;
 import com.polidea.rxandroidble2.scan.ScanSettings;
@@ -49,22 +45,23 @@ import io.reactivex.subjects.PublishSubject;
  * date:2018/8/6
  */
 public class RxBleOperator {
-    private Activity mActivity;
     private BluetoothAdapter mBtAdapter;
     private RxBleConnection mConnection;
     private CompositeDisposable compositeDisposable;
     private long retryTimes = 3;
+    private long retryInterval = 200;// unit ms
     private PublishSubject<Boolean> disconnectTrigger = PublishSubject.create();
     private PublishSubject<Boolean> stopScanTrigger = PublishSubject.create();
 
-    public RxBleOperator(Activity activity) {
-        mActivity = activity;
+
+    public RxBleOperator() {
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         add(RxBle.registerState().subscribe(state -> {
             switch (state) {
                 case BLUETOOTH_NOT_AVAILABLE:
                 case LOCATION_PERMISSION_NOT_GRANTED:
                 case BLUETOOTH_NOT_ENABLED:
+                    RxBleLog.d("state has changed:%s", state);
                     disconnect();
             }
         }));
@@ -75,48 +72,49 @@ public class RxBleOperator {
         return this;
     }
 
+    public RxBleOperator setRetryInterval(long interval) {
+        this.retryInterval = interval;
+        return this;
+    }
+
     /**
      * enable bluetooth
      */
     @SuppressLint("MissingPermission")
     public Observable<RxBleClient> enable() {
-        return Observable.create(emitter -> {
-            if (RxBle.isEnable()) return;
-            if (hasPermission() && mBtAdapter.enable()) {
-                Log.d("RxBleDemo", "enable bluetooth");
+        return Observable.create((ObservableOnSubscribe<RxBleClient>) emitter -> {
+            if (!RxBle.hasPermission()) {
+                boolean supportRequest = RxBle.requestPermission(new RxBle.PermissionListener() {
+                    @Override
+                    public void onGranted() {
+                        if (mBtAdapter.enable()) {
+                            emitter.onNext(RxBle.client());
+                            emitter.onComplete();
+                        } else {
+                            emitter.onError(new BleEnableException(BleEnableException.ENABLE_FAILED, "enable bluetooth failed!"));
+                        }
+                    }
+
+                    @Override
+                    public void onDenied() {
+                        emitter.onError(new BleEnableException(BleEnableException.PERMISSION_DENIED, "permission denied!"));
+                    }
+                });
+                if (supportRequest) {
+                    RxBleLog.d("request permissions for bluetooth");
+                    return;
+                }
+            }
+            if (RxBle.isEnable() || mBtAdapter.enable()) {
+                RxBleLog.d( "has permission, try to enable bluetooth");
                 emitter.onNext(RxBle.client());
                 emitter.onComplete();
-                return;
+            } else {
+                emitter.onError(new BleEnableException(BleEnableException.ENABLE_FAILED, "enable bluetooth failed!"));
             }
-            PermissionUtil.requestPermission(mActivity, new PermissionListener() {
-
-                        @Override
-                        public void permissionGranted(@NonNull String[] permission) {
-                            if (mBtAdapter.enable()) {
-                                Log.d("RxBleDemo", "enable bluetooth");
-                                emitter.onNext(RxBle.client());
-                                emitter.onComplete();
-                            } else {
-                                emitter.onError(new BleException("enable bluetooth failed!"));
-                            }
-                        }
-
-                        @Override
-                        public void permissionDenied(@NonNull String[] permission) {
-                            emitter.onError(new BleException("permission denied!"));
-                        }
-                    },
-                    Manifest.permission.BLUETOOTH_ADMIN,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION);
-        });
-    }
-
-    public boolean hasPermission() {
-        return PermissionUtil.hasPermission(mActivity,
-                Manifest.permission.BLUETOOTH_ADMIN,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION);
+        })
+                .doOnNext(client -> RxBleLog.d("enable bluetooth success"))
+                .doOnError(throwable -> RxBleLog.e("enable bluetooth failed:%s", throwable.toString()));
     }
 
     @SuppressLint("MissingPermission")
@@ -124,6 +122,7 @@ public class RxBleOperator {
         if (mBtAdapter.isEnabled()) {
             mBtAdapter.disable();
         }
+        RxBleLog.d("disable bluetooth");
     }
 
     /**
@@ -153,6 +152,8 @@ public class RxBleOperator {
         }
         return scanResultObservable.subscribeOn(Schedulers.io())
                 .takeUntil(stopScanTrigger)
+                .doOnNext(result -> RxBleLog.d( "Scan device:%s", result.getBleDevice()))
+                .doOnError(result -> RxBleLog.e( "Scan device failed:%s", result.toString()))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -185,29 +186,36 @@ public class RxBleOperator {
      * @param rxBleDevice device
      */
     public Observable<RxBleConnection> connect(final RxBleDevice rxBleDevice, final boolean autoConnect, final Timeout timeOut) {
-        return Observable.just("pass")
+        return Observable.just("connect")
                 .flatMap((Function<String, ObservableSource<RxBleConnection>>) s -> wrapConnect(rxBleDevice, autoConnect, timeOut))
                 .retry(retryTimes, throwable -> {
-                    Thread.sleep(100);
-                    Log.e("RxBleDemo", "retry:" + throwable);
-                    return throwable instanceof BleDisconnectedException || (throwable instanceof BleAlreadyConnectedException && mConnection == null);
+                    boolean retry = (throwable instanceof BleDisconnectedException
+                            || (throwable instanceof BleAlreadyConnectedException && mConnection == null)) && RxBle.isEnable();
+                    if (retry) {
+                        RxBleLog.e("reconnect caused by:%s", throwable.toString());
+                        Thread.sleep(retryInterval);
+                    }
+                    return retry;
                 })
                 .onErrorResumeNext(throwable -> {
                     if (throwable instanceof BleAlreadyConnectedException && mConnection != null) {
+                        RxBleLog.e("reuse connection :%s", mConnection.toString());
                         return Observable.just(mConnection);
                     }
                     return Observable.error(throwable);
                 })
                 .doOnNext(rxBleConnection -> {
-                    Log.d("RxBleDemo", "connect success");
+                    RxBleLog.d( "connect success:%s", rxBleDevice.getMacAddress());
                     mConnection = rxBleConnection;// hold connection
                 })
+                .doOnError(throwable -> RxBleLog.e("connect to %s failed, caused by:%s", rxBleDevice.getMacAddress(), throwable.toString()))
                 .takeUntil(disconnectTrigger)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
     private Observable<RxBleConnection> wrapConnect(final RxBleDevice rxBleDevice, final boolean autoConnect, final Timeout timeOut) {
+        RxBleLog.d( "connect to %s", rxBleDevice.getMacAddress());
         Observable<RxBleConnection> connectionObservable;
         if (mConnection != null) {
             connectionObservable = Observable.just(mConnection);
@@ -216,20 +224,17 @@ public class RxBleOperator {
                     : rxBleDevice.establishConnection(autoConnect);
         }
         Observable<RxBleConnection> finalObservable;
-        Log.d("RxBleDemo", "start connect:" + RxBle.isEnable());
         if (RxBle.isEnable()) {
             finalObservable = connectionObservable;
         } else {
-            finalObservable = enable().flatMap(rxBleClient -> {
-                Log.d("RxBleDemo", "register observable");
-                return RxBle.client().observeStateChanges()
-                        .filter(state -> {
-                            Log.d("RxBleDemo", "connect state:" + state);
-                            return state == RxBleClient.State.READY;
-                        })
-                        .flatMapSingle((Function<RxBleClient.State, SingleSource<RxBleClient>>) state -> Single.just(RxBle.client()))
-                        .flatMap((Function<RxBleClient, ObservableSource<RxBleConnection>>) client -> connectionObservable);
-            });
+            finalObservable = enable()
+                    .flatMap(rxBleClient -> RxBle.client().observeStateChanges()
+                            .filter(state -> {
+                                RxBleLog.d( "bluetooth state when connect:" + state);
+                                return state == RxBleClient.State.READY;
+                            })
+                            .flatMapSingle((Function<RxBleClient.State, SingleSource<RxBleClient>>) state -> Single.just(RxBle.client()))
+                            .flatMap((Function<RxBleClient, ObservableSource<RxBleConnection>>) client -> connectionObservable));
         }
         return finalObservable;
     }
@@ -241,9 +246,9 @@ public class RxBleOperator {
      * @return
      */
     public Single<byte[]> readCharacteristic(String macAddress, final UUID characteristicUUID) {
-        Log.d("RxBleDemo", "attempt to read time:" + System.currentTimeMillis());
+
         return readOrWrite(macAddress, rxBleConnection -> {
-            Log.d("RxBleDemo", "read time:" + System.currentTimeMillis());
+            RxBleLog.d("attempt to read Characteristic:%s", characteristicUUID);
             return rxBleConnection.readCharacteristic(characteristicUUID);
         });
     }
@@ -255,7 +260,10 @@ public class RxBleOperator {
      * @return
      */
     public Single<byte[]> readDescriptor(String macAddress, final BluetoothGattDescriptor descriptor) {
-        return readOrWrite(macAddress, rxBleConnection -> rxBleConnection.readDescriptor(descriptor));
+        return readOrWrite(macAddress, rxBleConnection -> {
+            RxBleLog.d( "attempt to read Descriptor:%s", descriptor.getUuid());
+            return rxBleConnection.readDescriptor(descriptor);
+        });
     }
 
     /**
@@ -264,7 +272,10 @@ public class RxBleOperator {
      * @param macAddress
      */
     public Single<byte[]> writeCharacteristic(String macAddress, final UUID characteristicUUID, final byte[] bytes) {
-        return readOrWrite(macAddress, rxBleConnection -> rxBleConnection.writeCharacteristic(characteristicUUID, bytes));
+        return readOrWrite(macAddress, rxBleConnection -> {
+            RxBleLog.d( "attempt to write Characteristic:%s", characteristicUUID);
+            return rxBleConnection.writeCharacteristic(characteristicUUID, bytes);
+        });
     }
 
     /**
@@ -273,8 +284,10 @@ public class RxBleOperator {
      * @return this is a pointless value, because write descriptor doesn't have return value
      */
     public Single<byte[]> writeDescriptor(String macAddress, final BluetoothGattDescriptor descriptor, final byte[] bytes) {
-        return readOrWrite(macAddress, rxBleConnection
-                -> rxBleConnection.writeDescriptor(descriptor, bytes).toSingle(() -> new byte[0]));
+        return readOrWrite(macAddress, rxBleConnection -> {
+            RxBleLog.d( "attempt to write Descriptor:%s", descriptor.getUuid());
+            return rxBleConnection.writeDescriptor(descriptor, bytes).toSingle(() -> new byte[0]);
+        });
     }
 
     /**
@@ -295,6 +308,7 @@ public class RxBleOperator {
      * stop scan
      */
     public void stopScan() {
+        RxBleLog.d("stop scan");
         stopScanTrigger.onNext(true);
     }
 
@@ -302,6 +316,7 @@ public class RxBleOperator {
      * disconnect
      */
     public void disconnect() {
+        RxBleLog.d("disconnect device");
         disconnectTrigger.onNext(true);
         mConnection = null;
     }
@@ -331,7 +346,7 @@ public class RxBleOperator {
         }
         disconnect();
         stopScan();
-        mActivity = null;
+        RxBleLog.d("release");
     }
 
 
@@ -345,7 +360,9 @@ public class RxBleOperator {
                 emitter.onComplete();
             }
         }).flatMap(function)
+                .doOnNext(observable -> RxBleLog.d("set up Indicate or Notification success"))
                 .doOnError(throwable -> {
+                    RxBleLog.e("set up Indicate or Notification failed %s", throwable.toString());
                     if (throwable instanceof BleDisconnectedException) mConnection = null;
                 })
                 .takeUntil(disconnectTrigger)
@@ -364,16 +381,16 @@ public class RxBleOperator {
             }
         }).flatMapSingle(function)
                 .takeUntil(disconnectTrigger)
+                .doOnNext(bytes -> RxBleLog.d("read or write success %s"))
                 .doOnError(throwable -> {
+                    RxBleLog.e("read or write failed %s", throwable.toString());
                     if (throwable instanceof BleDisconnectedException) mConnection = null;
                 })
                 .singleOrError()
                 .doOnSubscribe(readDisposable::set)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .doAfterSuccess(bytes -> {
-                    readDisposable.get().dispose();
-                });
+                .doAfterSuccess(bytes -> readDisposable.get().dispose());
     }
 
 }

@@ -1,6 +1,7 @@
 package com.joey.rxble;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -32,13 +33,21 @@ public class RxBle {
     private static boolean initEnable;
     private static RxBleClient sClient;
     private static PublishSubject<RxBleClient.State> sStatePublishSubject;
+    private static PermissionRequester sRequester;
+    private static final String[] PERMISSION_FOR_BLUETOOTH = {Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN};
 
-    public static void init(Context context) {
+    public static void init(Context context, PermissionRequester requester) {
         RxJavaPlugins.setErrorHandler(throwable -> {
             Log.e("RxBleDemo", "don't crash:" + throwable.toString());
         });
         if (sClient == null) {
             sClient = RxBleClient.create(context);
+        }
+        if (requester != null && sRequester == null) {
+            sRequester = requester;
         }
         observeState();
     }
@@ -74,6 +83,21 @@ public class RxBle {
     }
 
     /**
+     * @return support request permission
+     */
+    public static boolean requestPermission(PermissionListener listener) {
+        if (sRequester != null) {
+            sRequester.request(listener, PERMISSION_FOR_BLUETOOTH);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean hasPermission() {
+        return sRequester == null || sRequester.hasPermission(PERMISSION_FOR_BLUETOOTH);
+    }
+
+    /**
      * mark bluetooth state when application start
      */
     @SuppressLint("MissingPermission")
@@ -104,8 +128,8 @@ public class RxBle {
     }
 
 
-    public static RxBleOperator create(Activity activity) {
-        return new RxBleOperator(activity);
+    public static RxBleOperator create() {
+        return new RxBleOperator();
     }
 
     /**
@@ -132,6 +156,18 @@ public class RxBle {
 
     public static boolean isCharacteristicIndicatable(BluetoothGattCharacteristic characteristic) {
         return (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0;
+    }
+
+    public interface PermissionRequester {
+        void request(PermissionListener listener, String... permissions);
+
+        boolean hasPermission(String... permissions);
+    }
+
+    public interface PermissionListener {
+        void onGranted();
+
+        void onDenied();
     }
 
 }
