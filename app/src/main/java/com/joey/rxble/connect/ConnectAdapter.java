@@ -1,6 +1,7 @@
 package com.joey.rxble.connect;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -57,8 +58,20 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
         }
     }
 
+    public static class ConnectDescrptorHolder extends ConnectHolder {
+
+        TextView line1;
+        TextView line2;
+
+        ConnectDescrptorHolder(View itemView) {
+            super(itemView);
+            line1 = itemView.findViewById(R.id.scan_line1);
+            line2 = itemView.findViewById(R.id.scan_line2);
+        }
+    }
+
     interface OnAdapterItemClickListener {
-        void onAdapterViewClick(int pos, BluetoothGattCharacteristic result);
+        void onAdapterViewClick(int pos, Object result);
     }
 
     private final List<Object> data = new ArrayList<>();
@@ -68,7 +81,10 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
         // Not the best way to ensure distinct devices, just for sake on the demo.
         for (BluetoothGattService service : result) {
             data.add(service);
-            data.addAll(service.getCharacteristics());
+            for (BluetoothGattCharacteristic c : service.getCharacteristics()) {
+                data.add(c);
+                data.addAll(c.getDescriptors());
+            }
         }
         notifyDataSetChanged();
     }
@@ -93,8 +109,10 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
         Object obj = data.get(position);
         if (obj instanceof  BluetoothGattService) {
             return 0;
-        } else {
+        } else if (obj instanceof  BluetoothGattCharacteristic){
             return 1;
+        } else {
+            return 2;
         }
     }
 
@@ -104,9 +122,12 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
             case 0:
                 final View sView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_connect_service, parent, false);
                 return new ConnectServiceHolder(sView);
-            default:
-                final View cView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_scan, parent, false);
+            case 1:
+                final View cView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_connect_c, parent, false);
                 return new ConnectCharacteristicHolder(cView);
+                default:
+                    final View dView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_connect_descrptor, parent, false);
+                    return new ConnectDescrptorHolder(dView);
         }
     }
 
@@ -122,6 +143,14 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
             ((ConnectCharacteristicHolder) holder).line1.setText(String.format(Locale.getDefault(), "Characteristic: %s", characteristic.getUuid()));
             ((ConnectCharacteristicHolder) holder).line2.setText(String.format(Locale.getDefault(), "property: %s", describeProperties(characteristic)));
             ((ConnectCharacteristicHolder) holder).itemView.setOnClickListener(v -> {onAdapterItemClickListener.onAdapterViewClick(position, characteristic);});
+            return;
+        }
+
+        if (holder instanceof ConnectDescrptorHolder) {
+            BluetoothGattDescriptor descriptor = (BluetoothGattDescriptor) data.get(position);
+            ((ConnectDescrptorHolder) holder).line1.setText(String.format(Locale.getDefault(), "Descriptor: %s", descriptor.getUuid()));
+            ((ConnectDescrptorHolder) holder).line2.setText(String.format(Locale.getDefault(), "permission: %s", descriptor.getPermissions()));
+            ((ConnectDescrptorHolder) holder).itemView.setOnClickListener(v -> {onAdapterItemClickListener.onAdapterViewClick(position, descriptor);});
         }
     }
 

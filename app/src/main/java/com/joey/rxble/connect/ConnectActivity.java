@@ -2,6 +2,7 @@ package com.joey.rxble.connect;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -115,25 +116,51 @@ public class ConnectActivity extends AppCompatActivity {
     }
 
 
-    private void click(BluetoothGattCharacteristic result) {
-        List<String> choice = new ArrayList<>(3);
-        if (RxBle.isCharacteristicReadable(result)) choice.add("Read");
-        if (RxBle.isCharacteristicWritable(result)) choice.add("Write");
-        if (RxBle.isCharacteristicNotifiable(result)) choice.add("Notify");
-        if (RxBle.isCharacteristicIndicatable(result)) choice.add("Indicate");
+    private void click(Object result) {
+        if (result instanceof BluetoothGattCharacteristic) {
+            List<String> choice = new ArrayList<>(3);
+            if (RxBle.isCharacteristicReadable((BluetoothGattCharacteristic) result))
+                choice.add("Read");
+            if (RxBle.isCharacteristicWritable((BluetoothGattCharacteristic) result))
+                choice.add("Write");
+            if (RxBle.isCharacteristicNotifiable((BluetoothGattCharacteristic) result))
+                choice.add("Notify");
+            if (RxBle.isCharacteristicIndicatable((BluetoothGattCharacteristic) result))
+                choice.add("Indicate");
 
 
-        if (choice.isEmpty()) {
-            toast("no operation for this characteristic");
-            return;
+            if (choice.isEmpty()) {
+                toast("no operation for this characteristic");
+                return;
+            }
+
+            new AlertDialog.Builder(this)
+                    .setItems(choice.toArray(new String[choice.size()]),
+                            ((dialog, which) -> handleCharacteristics(dialog, which, choice, (BluetoothGattCharacteristic) result)))
+                    .setCancelable(true)
+                    .create()
+                    .show();
         }
 
-        new AlertDialog.Builder(this)
-                .setItems(choice.toArray(new String[choice.size()]),
-                        ((dialog, which) -> handleCharacteristics(dialog, which, choice, result)))
-                .setCancelable(true)
-                .create()
-                .show();
+        if (result instanceof BluetoothGattDescriptor) {
+            new AlertDialog.Builder(this)
+                    .setItems(new String[]{"Read", "Write"},
+                            ((dialog, which) -> handleDescriptor(dialog, which, (BluetoothGattDescriptor) result)))
+                    .setCancelable(true)
+                    .create()
+                    .show();
+        }
+    }
+
+    private void handleDescriptor(DialogInterface dialog, int which, BluetoothGattDescriptor result) {
+        switch (which) {
+            case 0:
+                readDescriptor(result);
+                break;
+            case 1:
+                writeDescriptor(result);
+                break;
+        }
     }
 
     private void handleCharacteristics(DialogInterface dialog, int which, List<String> choice, BluetoothGattCharacteristic result) {
@@ -154,8 +181,30 @@ public class ConnectActivity extends AppCompatActivity {
     }
 
     @SuppressLint("CheckResult")
+    private void readDescriptor(BluetoothGattDescriptor result) {
+        mOperator.readDescriptor(mDevice, result)
+                .subscribe(bytes -> {
+                    toast("read descriptor message:" + HexString.bytesToHex(bytes));
+                    tvRead.setText("read descriptor message:" + HexString.bytesToHex(bytes));
+                }, this::error);
+    }
+
+    @SuppressLint("CheckResult")
+    private void writeDescriptor(BluetoothGattDescriptor result) {
+        if (TextUtils.isEmpty(etWrite.getText())) {
+            toast("write content can not be null");
+            return;
+        }
+        mOperator.writeDescriptor(mDevice, result, HexString.hexToBytes(etWrite.getText().toString()))
+                .subscribe(bytes -> {
+                    toast("write descriptor message:" + HexString.bytesToHex(bytes));
+                    tvRead.setText("write descriptor message:" + HexString.bytesToHex(bytes));
+                }, this::error);
+    }
+
+    @SuppressLint("CheckResult")
     private void write(UUID uuid) {
-        if (TextUtils.isEmpty(etWrite.getText())){
+        if (TextUtils.isEmpty(etWrite.getText())) {
             toast("write content can not be null");
             return;
         }
@@ -164,7 +213,7 @@ public class ConnectActivity extends AppCompatActivity {
                 .subscribe(bytes -> {
                     tvRead.setText("write success:" + HexString.bytesToHex(bytes));
                     toast("write success:" + HexString.bytesToHex(bytes));
-                },this::error);
+                }, this::error);
     }
 
     private void indicate(UUID uuid) {
