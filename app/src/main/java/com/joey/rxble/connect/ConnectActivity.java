@@ -1,5 +1,6 @@
 package com.joey.rxble.connect;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
@@ -11,20 +12,25 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
 import com.joey.rxble.RxBleOperator;
+import com.joey.rxble.operation.RxBleIndicateCharacteristicFunc;
 import com.joey.rxble.operation.RxBleTransformer;
 import com.joey.rxble.util.HexString;
+import com.polidea.rxandroidble2.NotificationSetupMode;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDeviceServices;
+import com.polidea.rxandroidble2.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -42,6 +48,7 @@ public class ConnectActivity extends AppCompatActivity {
     private ConnectAdapter mAdapter;
     private UUID mRead;
     private Button btRead;
+    private EditText etWrite;
 
 
     @Override
@@ -58,6 +65,7 @@ public class ConnectActivity extends AppCompatActivity {
         tvDevice = findViewById(R.id.tv_mac);
         tvRead = findViewById(R.id.tv_read_content);
         btRead = findViewById(R.id.read_toggle_btn);
+        etWrite = findViewById(R.id.etWrite);
         btRead.setVisibility(View.GONE);
         btRead.setOnClickListener(v -> read(mRead));
         RecyclerView rvScan = findViewById(R.id.scan_results);
@@ -94,7 +102,7 @@ public class ConnectActivity extends AppCompatActivity {
     }
 
     private void connect() {
-        mOperator.add(mOperator.connect(mDevice)
+        mOperator.add(mOperator.connect(mDevice, false, new Timeout(5, TimeUnit.SECONDS))
                 .flatMap((Function<RxBleConnection, Observable<RxBleDeviceServices>>)
                         rxBleConnection -> rxBleConnection.discoverServices().toObservable())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -108,19 +116,18 @@ public class ConnectActivity extends AppCompatActivity {
 
 
     private void click(BluetoothGattCharacteristic result) {
-        List<String> choice = new ArrayList(3);
-        if (RxBle.isCharacteristicReadable(result)) {
-            choice.add("Read");
-        } else if (RxBle.isCharacteristicWritable(result)) {
-            choice.add("Write");
-        } else if (RxBle.isCharacteristicNotifiable(result)) {
-            choice.add("Notify");
-            choice.add("Indicate");
-        }
+        List<String> choice = new ArrayList<>(3);
+        if (RxBle.isCharacteristicReadable(result)) choice.add("Read");
+        if (RxBle.isCharacteristicWritable(result)) choice.add("Write");
+        if (RxBle.isCharacteristicNotifiable(result)) choice.add("Notify");
+        if (RxBle.isCharacteristicIndicatable(result)) choice.add("Indicate");
+
+
         if (choice.isEmpty()) {
             toast("no operation for this characteristic");
             return;
         }
+
         new AlertDialog.Builder(this)
                 .setItems(choice.toArray(new String[choice.size()]),
                         ((dialog, which) -> handleCharacteristics(dialog, which, choice, result)))
@@ -137,18 +144,36 @@ public class ConnectActivity extends AppCompatActivity {
             btRead.setText("Read:" + mRead);
             read(result.getUuid());
         } else if ("Write".equals(operation)) {
-            toast("write");
+            write(result.getUuid());
         } else if ("Notify".equals(operation)) {
             notifyC(result.getUuid());
-
         } else if ("Indicate".equals(operation)) {
             indicate(result.getUuid());
         }
         dialog.dismiss();
     }
 
-    private void indicate(UUID uuid) {
+    @SuppressLint("CheckResult")
+    private void write(UUID uuid) {
+        if (TextUtils.isEmpty(etWrite.getText())){
+            toast("write content can not be null");
+            return;
+        }
+        mOperator.connect(mDevice)
+                .flatMap(RxBleTransformer.writeCharacteristic(mDevice, uuid, HexString.hexToBytes(etWrite.getText().toString()), mOperator))
+                .subscribe(bytes -> {
+                    tvRead.setText("write success:" + HexString.bytesToHex(bytes));
+                    toast("write success:" + HexString.bytesToHex(bytes));
+                },this::error);
+    }
 
+    private void indicate(UUID uuid) {
+        mOperator.add(mOperator.connect(mDevice)
+                .flatMap(RxBleTransformer.indicateCharacteristic(mDevice, uuid, NotificationSetupMode.DEFAULT, mOperator))
+                .subscribe(bytes -> {
+                    toast("indicate message:" + HexString.bytesToHex(bytes));
+                    tvRead.setText("indicate message:" + HexString.bytesToHex(bytes));
+                }, this::error));
     }
 
     private void notifyC(UUID uuid) {
@@ -156,7 +181,7 @@ public class ConnectActivity extends AppCompatActivity {
                 .flatMap(RxBleTransformer.notifyCharacteristic(mDevice, uuid, null, mOperator))
                 .subscribe(bytes -> {
                     toast("notify success:" + HexString.bytesToHex(bytes));
-                    tvRead.setText(HexString.bytesToHex(bytes));
+                    tvRead.setText("notify success:" + HexString.bytesToHex(bytes));
                 }, this::error));
     }
 
@@ -165,7 +190,7 @@ public class ConnectActivity extends AppCompatActivity {
                 .flatMap(RxBleTransformer.readCharacteristic(mDevice, result, mOperator))
                 .subscribe(bytes -> {
                     toast("read success:" + HexString.bytesToHex(bytes));
-                    tvRead.setText(HexString.bytesToHex(bytes));
+                    tvRead.setText("read success:" + HexString.bytesToHex(bytes));
                 }, this::error));
     }
 

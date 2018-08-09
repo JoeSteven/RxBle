@@ -35,6 +35,7 @@ import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.PublishSubject;
 
 /**
  * Description: easier way to use RxAndroidBle, require per
@@ -51,10 +52,10 @@ public class RxBleOperator {
     private Activity mActivity;
     private BluetoothAdapter mBtAdapter;
     private RxBleConnection mConnection;
-    private Disposable scanDisposable;
-    private Disposable connectDisposable;
     private CompositeDisposable compositeDisposable;
     private long retryTimes = 3;
+    private PublishSubject<Boolean> disconnectTrigger = PublishSubject.create();
+    private PublishSubject<Boolean> stopScanTrigger = PublishSubject.create();
 
     public RxBleOperator(Activity activity) {
         mActivity = activity;
@@ -151,8 +152,7 @@ public class RxBleOperator {
                             .flatMap((Function<RxBleClient, ObservableSource<ScanResult>>) client -> client.scanBleDevices(scanSettings, scanFilter)));
         }
         return scanResultObservable.subscribeOn(Schedulers.io())
-                .doOnSubscribe(disposable -> scanDisposable = disposable)
-                .doOnDispose(() -> scanDisposable = null)
+                .takeUntil(stopScanTrigger)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -162,7 +162,14 @@ public class RxBleOperator {
      * connect to a devices
      */
     public Observable<RxBleConnection> connect(String macAddress) {
-        return connect(RxBle.client().getBleDevice(macAddress), false, null);
+        return connect(RxBle.client().getBleDevice(macAddress));
+    }
+
+    /**
+     * connect to a devices
+     */
+    public Observable<RxBleConnection> connect(RxBleDevice device) {
+        return connect(device, false, null);
     }
 
     /**
@@ -191,23 +198,20 @@ public class RxBleOperator {
                     }
                     return Observable.error(throwable);
                 })
-                .doOnSubscribe(disposable -> connectDisposable = disposable)
-                .doOnDispose(() -> {
-                    mConnection = null;// release connection
-                    connectDisposable = null;
-                }).doOnNext(rxBleConnection -> {
+                .doOnNext(rxBleConnection -> {
                     Log.d("RxBleDemo", "connect success");
                     mConnection = rxBleConnection;// hold connection
                 })
+                .takeUntil(disconnectTrigger)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
     private Observable<RxBleConnection> wrapConnect(final RxBleDevice rxBleDevice, final boolean autoConnect, final Timeout timeOut) {
         Observable<RxBleConnection> connectionObservable;
-        if (mConnection != null && connectDisposable != null && !connectDisposable.isDisposed()) {
+        if (mConnection != null) {
             connectionObservable = Observable.just(mConnection);
-        }else {
+        } else {
             connectionObservable = timeOut != null ? rxBleDevice.establishConnection(autoConnect, timeOut)
                     : rxBleDevice.establishConnection(autoConnect);
         }
@@ -291,21 +295,14 @@ public class RxBleOperator {
      * stop scan
      */
     public void stopScan() {
-        if (scanDisposable != null && !scanDisposable.isDisposed()) {
-            scanDisposable.dispose();
-        }
-        scanDisposable = null;
+        stopScanTrigger.onNext(true);
     }
 
     /**
      * disconnect
      */
     public void disconnect() {
-        if (connectDisposable != null && !connectDisposable.isDisposed()) {
-            connectDisposable.dispose();
-            Log.d("RxBleDemo", "disconnect");
-        }
-        connectDisposable = null;
+        disconnectTrigger.onNext(true);
         mConnection = null;
     }
 
@@ -324,7 +321,6 @@ public class RxBleOperator {
     public boolean dispose(Disposable disposable) {
         return compositeDisposable != null && disposable != null && compositeDisposable.remove(disposable);
     }
-
 
     /**
      * release this operator after use
@@ -352,6 +348,7 @@ public class RxBleOperator {
                 .doOnError(throwable -> {
                     if (throwable instanceof BleDisconnectedException) mConnection = null;
                 })
+                .takeUntil(disconnectTrigger)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -366,11 +363,12 @@ public class RxBleOperator {
                 emitter.onComplete();
             }
         }).flatMapSingle(function)
-                .doOnSubscribe(readDisposable::set)
+                .takeUntil(disconnectTrigger)
                 .doOnError(throwable -> {
                     if (throwable instanceof BleDisconnectedException) mConnection = null;
                 })
                 .singleOrError()
+                .doOnSubscribe(readDisposable::set)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doAfterSuccess(bytes -> {

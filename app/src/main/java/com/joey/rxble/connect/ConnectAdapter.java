@@ -130,6 +130,7 @@ public class ConnectAdapter extends RecyclerView.Adapter<ConnectAdapter.ConnectH
         if (RxBle.isCharacteristicReadable(characteristic)) properties.add("Read");
         if (RxBle.isCharacteristicWritable(characteristic)) properties.add("Write");
         if (RxBle.isCharacteristicNotifiable(characteristic)) properties.add("Notify");
+        if (RxBle.isCharacteristicIndicatable(characteristic)) properties.add("Indicate");
         return TextUtils.join(" ", properties);
     }
 

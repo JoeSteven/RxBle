@@ -39,6 +39,20 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:scrollbars="vertical"/>
+    <TextView
+        android:id="@+id/tv_read"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <EditText
+        android:id="@+id/et_device"
+        android:hint="device mac address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <EditText
+        android:id="@+id/et_uuid"
+        android:hint="characteristic uuid "
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
@@ -50,6 +64,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="stop scan"/>
+        <Button
+            android:id="@+id/bt_read"
+            android:text="Read"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
 
         <Button
             android:layout_weight="1"

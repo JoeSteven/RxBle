@@ -1,21 +1,35 @@
 package com.joey.rxble;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.joey.rxble.connect.ConnectActivity;
+import com.joey.rxble.operation.RxBleTransformer;
+import com.joey.rxble.util.HexString;
+import com.polidea.rxandroidble2.RxBleConnection;
+import com.polidea.rxandroidble2.scan.ScanFilter;
 import com.polidea.rxandroidble2.scan.ScanResult;
+
+import java.util.UUID;
 
 public class ScanActivity extends AppCompatActivity implements View.OnClickListener {
 
     private RxBleOperator mOperator;
     private ScanAdapter mAdapter;
+    private EditText etDevice;
+    private EditText etUUID;
+    private TextView tvRead;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +45,14 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.close_toggle_btn).setOnClickListener(this);
         findViewById(R.id.stop_toggle_btn).setOnClickListener(this);
         findViewById(R.id.quit_toggle_btn).setOnClickListener(this);
+        findViewById(R.id.bt_read).setOnClickListener(this);
+        tvRead = findViewById(R.id.tv_read);
+        etDevice = findViewById(R.id.et_device);
+        etUUID = findViewById(R.id.et_uuid);
+        etDevice.setText(getSharedPreferences("default",MODE_PRIVATE)
+                .getString("device",""));
+        etUUID.setText(getSharedPreferences("default",MODE_PRIVATE)
+                .getString("uuid",""));
         RecyclerView rvScan = findViewById(R.id.scan_results);
         mAdapter = new ScanAdapter();
         rvScan.setLayoutManager(new LinearLayoutManager(this));
@@ -53,6 +75,28 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
         startActivity(intent);
     }
 
+    @SuppressLint("CheckResult")
+    public void read() {
+        if(TextUtils.isEmpty(etDevice.getText()) || TextUtils.isEmpty(etUUID.getText())){
+            toast("device address and uuid must not be null");
+            return;
+        }
+        mOperator.scan(new ScanFilter.Builder().setDeviceAddress(etDevice.getText().toString()).build())
+                .doOnNext(this::refresh)
+                .flatMap(result -> mOperator.connect(result.getBleDevice()))
+                .flatMap(RxBleTransformer.readCharacteristic(etDevice.getText().toString(),
+                        UUID.fromString(etUUID.getText().toString()), mOperator))
+                .subscribe(bytes -> {
+                    tvRead.setText("read success:"+HexString.bytesToHex(bytes));
+                    toast("read success:"+HexString.bytesToHex(bytes));
+                    }, throwable -> tvRead.setText("read failed:"+throwable.toString()));
+        getSharedPreferences("default",MODE_PRIVATE)
+                .edit()
+                .putString("device",etDevice.getText().toString())
+                .putString("uuid",etUUID.getText().toString())
+                .apply();
+    }
+
 
     @Override
     public void onClick(View v) {
@@ -71,6 +115,9 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.close_toggle_btn:
                 close();
+                break;
+            case R.id.bt_read:
+                read();
                 break;
         }
     }
@@ -103,6 +150,12 @@ public class ScanActivity extends AppCompatActivity implements View.OnClickListe
 
     private void refresh(ScanResult scanResult) {
         mAdapter.addScanResult(scanResult);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mOperator.disconnect();
     }
 
     @Override

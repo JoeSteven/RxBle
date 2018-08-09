@@ -43,6 +43,7 @@ public class RxBle {
         observeState();
     }
 
+    @SuppressLint("CheckResult")
     private static void observeState() {
         client().observeStateChanges()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -127,6 +128,10 @@ public class RxBle {
     public static boolean isCharacteristicWritable(BluetoothGattCharacteristic characteristic) {
         return (characteristic.getProperties() & (BluetoothGattCharacteristic.PROPERTY_WRITE
                 | BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)) != 0;
+    }
+
+    public static boolean isCharacteristicIndicatable(BluetoothGattCharacteristic characteristic) {
+        return (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0;
     }
 
 }
