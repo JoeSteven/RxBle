@@ -32,18 +32,6 @@ android {
 }
 
 group = 'com.github.JoeSteven' // 最好是你的 github 名字
-// 指定编码
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-}
-// 打包源码
-task sourcesJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    classifier = 'sources'
-}
-artifacts {
-    archives sourcesJar
-}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
