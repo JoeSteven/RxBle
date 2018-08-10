@@ -20,7 +20,7 @@ public class BleApplication extends Application implements RxBle.PermissionReque
     public void onCreate() {
         super.onCreate();
         RxBle.init(this, this);
-        RxBle.enableLog(true);
+        RxBle.enableLog(BuildConfig.DEBUG);
         RxBle.markState();
         registerActivityLifecycleCallbacks(this);
     }
