@@ -1,4 +1,4 @@
-package com.joey.rxble.connect;
+package com.joey.rxble.sample.connect;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
@@ -13,13 +13,8 @@ import android.widget.TextView;
 
 import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
-import com.polidea.rxandroidble2.RxBleDevice;
-import com.polidea.rxandroidble2.scan.ScanResult;
 
-import java.io.PipedOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 

@@ -1,4 +1,4 @@
-package com.joey.rxble;
+package com.joey.rxble.sample;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
@@ -13,9 +13,12 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.joey.rxble.connect.ConnectActivity;
+import com.joey.rxble.R;
+import com.joey.rxble.RxBle;
+import com.joey.rxble.RxBleOperator;
+import com.joey.rxble.sample.connect.ConnectActivity;
 import com.joey.rxble.operation.RxBleTransformer;
-import com.joey.rxble.util.HexString;
+import com.joey.rxble.sample.util.HexString;
 import com.polidea.rxandroidble2.scan.ScanResult;
 
 import java.util.UUID;

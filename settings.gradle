@@ -1,1 +1,1 @@
-include ':app', ':rxblelib'
+include ':sample', ':rxblelib'

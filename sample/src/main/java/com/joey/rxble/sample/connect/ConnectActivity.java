@@ -1,4 +1,4 @@
-package com.joey.rxble.connect;
+package com.joey.rxble.sample.connect;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -21,7 +21,7 @@ import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
 import com.joey.rxble.RxBleOperator;
 import com.joey.rxble.operation.RxBleTransformer;
-import com.joey.rxble.util.HexString;
+import com.joey.rxble.sample.util.HexString;
 import com.polidea.rxandroidble2.NotificationSetupMode;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDeviceServices;

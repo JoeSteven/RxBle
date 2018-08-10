@@ -1,4 +1,4 @@
-package com.joey.rxble;
+package com.joey.rxble.sample;
 
 import android.app.Activity;
 import android.app.Application;
@@ -6,8 +6,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.joey.rxble.permission.PermissionListener;
-import com.joey.rxble.permission.PermissionUtil;
+import com.joey.rxble.BuildConfig;
+import com.joey.rxble.RxBle;
+import com.joey.rxble.sample.permission.PermissionListener;
+import com.joey.rxble.sample.permission.PermissionUtil;
+
 
 /**
  * Description:

@@ -1,4 +1,4 @@
-package com.joey.rxble.permission;
+package com.joey.rxble.sample.permission;
 
 /**
  * /**
