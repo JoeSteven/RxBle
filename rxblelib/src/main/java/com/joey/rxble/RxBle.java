@@ -40,9 +40,6 @@ public class RxBle {
             Manifest.permission.BLUETOOTH_ADMIN};
 
     public static void init(Context context, PermissionRequester requester) {
-        RxJavaPlugins.setErrorHandler(throwable -> {
-            Log.e("RxBleDemo", "don't crash:" + throwable.toString());
-        });
         if (sClient == null) {
             sClient = RxBleClient.create(context);
         }

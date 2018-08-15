@@ -49,7 +49,7 @@ public class RxBleOperator {
     private RxBleConnection mConnection;
     private CompositeDisposable compositeDisposable;
     private long retryTimes = 3;
-    private long retryInterval = 200;// unit ms
+    private long retryInterval = 1000;// unit ms
     private PublishSubject<Boolean> disconnectTrigger = PublishSubject.create();
     private PublishSubject<Boolean> stopScanTrigger = PublishSubject.create();
 
