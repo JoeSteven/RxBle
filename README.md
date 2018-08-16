@@ -7,20 +7,20 @@
 添加以下代码到项目根目录的 build.gradle 中
 
 ```groovy
-	allprojects {
-		repositories {
-			...
-			maven { url 'https://jitpack.io' }
-		}
+allprojects {
+	repositories {
+		...
+		maven { url 'https://jitpack.io' }
 	}
+}
 ```
 
 在要使用该库的module的 build.gradle 中添加依赖，latest-version 请以release-note中发布的最新版本号为准
 
 ```groovy
-	dependencies {
-      implementation 'com.github.JoeSteven:RxBle:latest-version'
-	}
+dependencies {
+	implementation 'com.github.JoeSteven:RxBle:latest-version'
+}
 ```
 
 ### 初始化
