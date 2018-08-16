@@ -97,35 +97,35 @@ RxBleOperator operator = RxBle.create();
 
 // 打开蓝牙
 operator.enable()
-  .subscribe(this::success, this::error)
+		.subscribe(this::success, this::error)
   
 // 关闭蓝牙
 operator.disable()
   
 // 扫描,蓝牙未打开的话会自动打开
 operator.scan(scanSettings, scanFilters)
-  		.subscribe(this::result, this::error);
+		.subscribe(this::result, this::error);
 
 // 停止扫描
 operator.stopScan();
 
 // 连接设备,蓝牙未打开的话会自动打开
-operator().setConnectRetryTimes(3)// 重连次数
-          	.setConnectRetryTimes(1000)// 重连间隔
-          	.connect(macAddress)// 设备
-  			.subscribe(this::connectSuccess, this::error);
+operator.setConnectRetryTimes(3)// 重连次数
+		.setConnectRetryTimes(1000)// 重连间隔
+		.connect(macAddress)// 设备
+		.subscribe(this::connectSuccess, this::error);
 
 //断开连接
-operator().disconnect();
+operator.disconnect();
 
 // 已知连接建立的情况下读取，蓝牙未开或者未连接状态失败，write,notify,indicate同理
-operator().readCharacteristic(device, uuid)
-            .subscribe(this::success, this::error)
+operator.readCharacteristic(device, uuid)
+		.subscribe(this::success, this::error)
   
 // 快捷方式读Characteristic，会自动打开蓝牙，建立连接，write,notify,indicate同理
 operator.connect(mDevice)
-         	.flatMap(RxBleTransformer.readCharacteristic(mDevice, result, mOperator))
-			.subscribe(this::success, this::error)
+		.flatMap(RxBleTransformer.readCharacteristic(mDevice, result, mOperator))
+		.subscribe(this::success, this::error)
 
 // 管理ble操作的相关订阅
 operator.add();
