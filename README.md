@@ -48,7 +48,34 @@ RxBle.init(Global.context(), new BlePermissionRequester());
 - `RxBle` - 主要为一些静态方法
 - `RxOperator` -主要为ble的具体操作
 
-#### 1.蓝牙状态恢复
+#### 1.RxBle
+
+```java
+// 打开log日志
+void enableLog(boolean enable); 
+
+// 获取RxBleClient
+RxBleClient client(); 
+
+// 构造RxBleOperator
+RxBleOperator create();
+
+// 蓝牙是否打开
+boolean isEnable();
+
+// 注册蓝牙状态变化
+PublishSubject<RxBleClient.State> registerState();
+
+// Characteristic 是否支持 read,write,notify,indicate 
+boolean isCharacteristicNotifiable(BluetoothGattCharacteristic characteristic);
+boolean isCharacteristicReadable(BluetoothGattCharacteristic characteristic);
+boolean isCharacteristicWritable(BluetoothGattCharacteristic characteristic);
+boolean isCharacteristicIndicatable(BluetoothGattCharacteristic characteristic);
+```
+
+
+
+#### 2.蓝牙状态恢复
 
 如果希望在使用完蓝牙功能后把状态恢复到使用前的状态（例如，打开蓝牙开小区门禁，开完用户退出应用，自动关闭蓝牙）
 
@@ -60,7 +87,7 @@ Rxble.markState();
 Rxble.restoreState();
 ```
 
-#### 2.Ble 相关操作
+#### 3.Ble 相关操作
 
 构造 operator 不需要单例，以页面为例的话，最好每个页面持有自己的operator，operator会处理订阅，避免内存泄露
 

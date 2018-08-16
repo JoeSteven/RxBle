@@ -66,7 +66,7 @@ public class RxBle {
      * register observer to observe bluetooth state change
      */
     @MainThread
-    static PublishSubject<RxBleClient.State> registerState() {
+    public static PublishSubject<RxBleClient.State> registerState() {
         if (sStatePublishSubject == null) sStatePublishSubject = PublishSubject.create();
         return sStatePublishSubject;
     }
