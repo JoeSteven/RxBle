@@ -377,10 +377,8 @@ public class RxBleOperator {
                 emitter.onError(new BleDisconnectedException(macAddress));
             } else {
                 emitter.onNext(mConnection);
-                emitter.onComplete();
             }
         }).flatMapSingle(function)
-                .takeUntil(disconnectTrigger)
                 .doOnNext(bytes -> RxBleLog.d("read or write success %s"))
                 .doOnError(throwable -> {
                     RxBleLog.e("read or write failed %s", throwable.toString());

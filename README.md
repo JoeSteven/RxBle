@@ -134,3 +134,8 @@ operator.add();
 operator.release();
 ```
 
+
+
+###  Thanks
+
+[RxAndroidBle](https://github.com/Polidea/RxAndroidBle)
