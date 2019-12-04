@@ -1,18 +1,18 @@
-package com.joey.rxble.sample.connect;
+package com.joey.sample.connect;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
+import com.joey.sample.R;
 
 import java.util.ArrayList;
 import java.util.List;

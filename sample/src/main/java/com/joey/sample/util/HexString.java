@@ -1,4 +1,4 @@
-package com.joey.rxble.sample.util;
+package com.joey.sample.util;
 
 public class HexString {
 

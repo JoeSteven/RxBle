@@ -3,13 +3,13 @@ apply plugin: 'com.github.dcendents.android-maven'
 
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
 
 
 
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 27
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
     }
@@ -26,6 +26,6 @@ group = 'com.github.JoeSteven' // 最好是你的 github 名字
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    api 'com.polidea.rxandroidble2:rxandroidble:1.6.0'
+    api 'com.polidea.rxandroidble2:rxandroidble:1.10.5'
     api 'io.reactivex.rxjava2:rxandroid:2.0.2'
 }

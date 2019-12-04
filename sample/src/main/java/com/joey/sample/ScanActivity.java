@@ -1,11 +1,11 @@
-package com.joey.rxble.sample;
+package com.joey.sample;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -13,12 +13,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
 import com.joey.rxble.RxBleOperator;
-import com.joey.rxble.sample.connect.ConnectActivity;
+import com.joey.sample.connect.ConnectActivity;
 import com.joey.rxble.operation.RxBleTransformer;
-import com.joey.rxble.sample.util.HexString;
+import com.joey.sample.util.HexString;
 import com.polidea.rxandroidble2.scan.ScanResult;
 
 import java.util.UUID;

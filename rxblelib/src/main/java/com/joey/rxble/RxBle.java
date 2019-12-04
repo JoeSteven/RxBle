@@ -3,18 +3,15 @@ package com.joey.rxble;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
-import android.support.annotation.MainThread;
-import android.util.Log;
+import androidx.annotation.MainThread;
 
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.internal.RxBleLog;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.subjects.PublishSubject;
 
 

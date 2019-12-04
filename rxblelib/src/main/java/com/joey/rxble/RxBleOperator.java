@@ -3,7 +3,8 @@ package com.joey.rxble;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
 
 import com.joey.rxble.exception.BleEnableException;
 import com.polidea.rxandroidble2.NotificationSetupMode;

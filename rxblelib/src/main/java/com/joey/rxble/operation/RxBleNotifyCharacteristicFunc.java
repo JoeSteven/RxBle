@@ -9,7 +9,6 @@ import com.polidea.rxandroidble2.RxBleConnection;
 import java.util.UUID;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.functions.Function;
 
 /**

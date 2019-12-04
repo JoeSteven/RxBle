@@ -1,6 +1,6 @@
-package com.joey.rxble.sample.permission;
+package com.joey.sample.permission;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 /**
  * /**

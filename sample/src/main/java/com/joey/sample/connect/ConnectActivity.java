@@ -1,14 +1,14 @@
-package com.joey.rxble.sample.connect;
+package com.joey.sample.connect;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -17,11 +17,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.joey.rxble.R;
 import com.joey.rxble.RxBle;
 import com.joey.rxble.RxBleOperator;
 import com.joey.rxble.operation.RxBleTransformer;
-import com.joey.rxble.sample.util.HexString;
+import com.joey.sample.R;
+import com.joey.sample.util.HexString;
 import com.polidea.rxandroidble2.NotificationSetupMode;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDeviceServices;
@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Function;
 
@@ -242,6 +243,7 @@ public class ConnectActivity extends AppCompatActivity {
     }
 
     private void refresh(RxBleDeviceServices rxBleDeviceServices) {
+        if (rxBleDeviceServices == null) return;
         isConnect = true;
         btConnect.setText("DisConnect");
         rxBleDeviceServices.getBluetoothGattServices();
